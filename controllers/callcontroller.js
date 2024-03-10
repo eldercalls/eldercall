@@ -54,14 +54,14 @@ const generateCallTwiML = (calleeNumber) => {
   twiml.play(
     "https://drab-zebu-6611.twil.io/assets/TunePocket-Touch-Of-Life-Logo-Preview.mp3"
   );
-  twiml.dial();
+  twiml.dial(calleeNumber);
 
   return twiml.toString();
 };
 
 const makeCall = async (req, res) => {
   // const user = req.user._id;
-  const { calleeNumber, calleeName, calldirection } = req.body;
+  const { calleeNumber, calleeName, calldirection, audioCategory} = req.body;
   try {
     if (!calleeNumber) {
       return res.status(400).send("Recipient number is required");
@@ -70,10 +70,14 @@ const makeCall = async (req, res) => {
     // Generate the access token
     // const token = await callTokenGenerator(req);
 
-    const twimlResponse = generateCallTwiML(calleeNumber);
+    // const twimlResponse = generateCallTwiML(calleeNumber);
+    // const twimlUrl = new URL(
+    //   `https://${req.get("host")}/play-audio/${audioCategory}`
+    // ).toString();
 
     const call = await client.calls.create({
-      twiml: twimlResponse,
+      // twiml: twimlResponse,
+      url:`https://${req.get("host")}/play-audio/${audioCategory}`,
       to: calleeNumber,
       from: process.env.PHONE_NUMBER,
       statusCallback: "https://drab-zebu-6611.twil.io/status",
@@ -87,15 +91,11 @@ const makeCall = async (req, res) => {
     };
 
     const callRecord = new Call({
-      // userId: user,
-      calls: {
-        callSid: call.sid,
-        calleeName: calleeName,
-        phoneNumber: calleeNumber,
-        calldirection: checkDirection(),
-        callDuration: call.duration,
-        callDate: Date.now(),
-      },
+      callSid: call.sid,
+      phoneNumber: calleeNumber,
+      calldirection: checkDirection(),
+      callDuration: call.duration,
+      callDate: new Date().toDateString(),
     });
     await callRecord.save();
 
@@ -110,6 +110,7 @@ const makeCall = async (req, res) => {
     res.status(500).send("Failed to make the call");
   }
 };
+
 
 const getCurrentCallSid = async () => {
   const user = req.user._id;
